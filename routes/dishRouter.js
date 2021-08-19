@@ -26,7 +26,7 @@ dishRouter
     })
     // authenticate.verifyUser is a middleware, if the authenticate is successful, it will proceed (req, res, next).
     // Can say as a barrier to this post method
-    .post(authenticate.verifyUser, (req, res, next) => {
+    .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Dishes.create(req.body)
             .then(
                 (dish) => {
@@ -39,11 +39,11 @@ dishRouter
             )
             .catch((err) => next(err));
     })
-    .put(authenticate.verifyUser, (req, res, next) => {
+    .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         res.statusCode = 403;
         res.end("PUT operation not supported on /dishes");
     })
-    .delete(authenticate.verifyUser, (req, res, next) => {
+    .delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Dishes.remove({})
             .then(
                 (resp) => {
@@ -74,11 +74,11 @@ dishRouter
         // Assignment 1 Task 1
         // res.end("Will send details of the dish: " + req.params.dishId + " to you!");
     })
-    .post(authenticate.verifyUser, (req, res, next) => {
+    .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         res.statusCode = 403;
         res.end("POST operation not supported on /dishes/" + req.params.dishId);
     })
-    .put(authenticate.verifyUser, (req, res, next) => {
+    .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Dishes.findByIdAndUpdate(
             req.params.dishId,
             {
@@ -99,7 +99,7 @@ dishRouter
         // res.write("Updating the dish: " + req.params.dishId + "\n");
         // res.end("Will update the dish: " + req.body.name + " with details: " + req.body.description);
     })
-    .delete(authenticate.verifyUser, (req, res, next) => {
+    .delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Dishes.findByIdAndRemove(req.params.dishId)
             .then(
                 (resp) => {
@@ -168,7 +168,7 @@ dishRouter
         res.statusCode = 403;
         res.end("PUT operation not supported on /dishes/" + req.params.dishId + "/comments");
     })
-    .delete(authenticate.verifyUser, (req, res, next) => {
+    .delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
         Dishes.findById(req.params.dishId)
             .then(
                 (dish) => {
@@ -251,6 +251,10 @@ dishRouter
                         err = new Error("Dish " + req.params.dishId + " not found");
                         err.status = 404;
                         return next(err);
+                    } else if (!dish.comments.id(req.params.commentId).author.equals(req.user.id)) {
+                        err = new Error("You are not authorized to update this comment!");
+                        err.status = 403;
+                        return next(err);
                     } else {
                         err = new Error("Comment " + req.params.commentId + " not found");
                         err.status = 404;
@@ -282,6 +286,10 @@ dishRouter
                     } else if (dish == null) {
                         err = new Error("Dish " + req.params.dishId + " not found");
                         err.status = 404;
+                        return next(err);
+                    } else if (!dish.comments.id(req.params.commentId).author.equals(req.user.id)) {
+                        err = new Error("You are not authorized to delete this comment!");
+                        err.status = 403;
                         return next(err);
                     } else {
                         err = new Error("Comment " + req.params.commentId + " not found");
